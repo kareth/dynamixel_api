@@ -10,7 +10,7 @@
 
 #include "serial.h"
 
-#define LATENCY_TIME        (4)
+#define LATENCY_TIME        (8)
 
 namespace dynamixel {
 

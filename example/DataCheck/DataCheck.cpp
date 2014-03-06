@@ -22,6 +22,8 @@
 #define DEFAULT_BAUDNUM		1 // 1Mbps
 #define DEFAULT_ID		1
 
+dynamixel::Dynamixel* dynamixel_api;
+
 void PrintCommStatus(int CommStatus);
 void PrintErrorCode(void);
 
@@ -32,8 +34,13 @@ double TimeSince(std::chrono::time_point<std::chrono::system_clock> start) {
 }
 
 void SetSpeed(int dynamixel_id, int speed) {
-  dxl_write_word( dynamixel_id, 32, speed);
+  dynamixel_api->dxl_write_word( dynamixel_id, 32, speed);
   printf("Speed: %d\n", speed);
+      int status = dynamixel_api->dxl_get_result();
+
+      if (status != COMM_RXSUCCESS) {
+        PrintCommStatus(status);
+      }
 }
 
 void TestRead(int dynamixel_id) {
@@ -49,8 +56,8 @@ void TestRead(int dynamixel_id) {
   for (int i = 0; i < words_count; i++) {
     auto start = std::chrono::system_clock::now();
     for (int it = 0; it < iterations; it++) {
-      int pos = dxl_read_word(dynamixel_id, words[i]);
-      int status = dxl_get_result();
+      int pos = dynamixel_api->dxl_read_word(dynamixel_id, words[i]);
+      int status = dynamixel_api->dxl_get_result();
       if (status != COMM_RXSUCCESS) {
         PrintCommStatus(status);
         break;
@@ -62,8 +69,8 @@ void TestRead(int dynamixel_id) {
   for (int i = 0; i < bytes_count; i++) {
     auto start = std::chrono::system_clock::now();
     for (int it = 0; it < iterations; it++) {
-      int pos = dxl_read_byte(dynamixel_id, bytes[i]);
-      int status = dxl_get_result();
+      int pos = dynamixel_api->dxl_read_byte(dynamixel_id, bytes[i]);
+      int status = dynamixel_api->dxl_get_result();
       if (status != COMM_RXSUCCESS) {
         PrintCommStatus(status);
         break;
@@ -78,7 +85,7 @@ void TestWrite(int dynamixel_id) {
 
   auto start = std::chrono::system_clock::now();
   for (int i = 0; i < iterations; i++) {
-    dxl_write_word(dynamixel_id, 32, 1023); // Moving speed
+    dynamixel_api->dxl_write_word(dynamixel_id, 32, 1023); // Moving speed
   }
   printf("Write speed: %lf Hz\n", double(iterations) / TimeSince(start) );
 }
@@ -97,12 +104,12 @@ void TestMovingSpeed(int dynamixel_id, int speed) {
 
   for (int it = 0; it < iterations; it++) {
     int i = it % 2;
-    dxl_write_word(dynamixel_id, P_GOAL_POSITION_L, positions[i]);
+    dynamixel_api->dxl_write_word(dynamixel_id, P_GOAL_POSITION_L, positions[i]);
 
     int pos;
     do {
-      pos = dxl_read_word(dynamixel_id, P_PRESENT_POSITION_L);
-      int status = dxl_get_result();
+      pos = dynamixel_api->dxl_read_word(dynamixel_id, P_PRESENT_POSITION_L);
+      int status = dynamixel_api->dxl_get_result();
 
       if (status != COMM_RXSUCCESS) {
         PrintCommStatus(status);
@@ -126,41 +133,40 @@ void FromTo(int dynamixel_id, int from, int to, int speed) {
     printf("Press Enter key to continue!(press ESC and Enter to quit)\n");
     if (getchar() == 0x1b) break;
 
-    dxl_write_word(dynamixel_id, P_GOAL_POSITION_L, positions[i]);
+    dynamixel_api->dxl_write_word(dynamixel_id, P_GOAL_POSITION_L, positions[i]);
 
     int pos;
     do {
-      pos = dxl_read_word( dynamixel_id, P_PRESENT_POSITION_L );
-      int status = dxl_get_result();
+      pos = dynamixel_api->dxl_read_word( dynamixel_id, P_PRESENT_POSITION_L );
+      int status = dynamixel_api->dxl_get_result();
 
       if (status != COMM_RXSUCCESS) {
         PrintCommStatus(status);
         break;
       }
       /*
-      int goal_position = dxl_read_word( DEFAULT_ID, 30);
-      int goal_speed = dxl_read_word( DEFAULT_ID, 32);
-      int limit = dxl_read_word( DEFAULT_ID, 34);
-      int position = dxl_read_word( DEFAULT_ID, 36);
-      int speed = dxl_read_word( DEFAULT_ID, 38);
-      int load = dxl_read_word( DEFAULT_ID, 38);
-      int moving = Moving = dxl_read_byte( DEFAULT_ID, 46 );
-      int temp = Moving = dxl_read_byte( DEFAULT_ID, 46 );
+      int goal_position = dynamixel_api->dxl_read_word( DEFAULT_ID, 30);
+      int goal_speed = dynamixel_api->dxl_read_word( DEFAULT_ID, 32);
+      int limit = dynamixel_api->dxl_read_word( DEFAULT_ID, 34);
+      int position = dynamixel_api->dxl_read_word( DEFAULT_ID, 36);
+      int speed = dynamixel_api->dxl_read_word( DEFAULT_ID, 38);
+      int load = dynamixel_api->dxl_read_word( DEFAULT_ID, 38);
+      int moving = Moving = dynamixel_api->dxl_read_byte( DEFAULT_ID, 46 );
+      int temp = Moving = dynamixel_api->dxl_read_byte( DEFAULT_ID, 46 );
       */
     } while(abs(positions[i] - pos) > 25);
   }
 }
 
 void MoveRoboticArm() {
-
   printf("Do you really want to run leg simulation? enter 123\n");
   int ans;
   scanf("%d",&ans);
   if (ans != 123) return;
 
   int speed = 100;
-  printf("Speed: \n",1);
-  scanf("%d",&speed);
+  printf("Speed: \n");
+  scanf("%d", &speed);
 
   SetSpeed(1, speed);
   SetSpeed(2, speed);
@@ -181,17 +187,17 @@ void MoveRoboticArm() {
     i^=1;
 
     if (p[i][0] < 884 && p[i][0] > 140)
-      dxl_write_word(1, P_GOAL_POSITION_L, p[i][0]);
+      dynamixel_api->dxl_write_word(1, P_GOAL_POSITION_L, p[i][0]);
     else
       printf("OOB\n");
 
     if (p[i][1] < 884 && p[i][1] > 140)
-      dxl_write_word(2, P_GOAL_POSITION_L, p[i][1]);
+      dynamixel_api->dxl_write_word(2, P_GOAL_POSITION_L, p[i][1]);
     else
       printf("OOB\n");
 
     if (p[i][2] < 884 && p[i][2] > 140)
-      dxl_write_word(3, P_GOAL_POSITION_L, p[i][2]);
+      dynamixel_api->dxl_write_word(3, P_GOAL_POSITION_L, p[i][2]);
     else
       printf("OOB\n");
   }
@@ -199,7 +205,7 @@ void MoveRoboticArm() {
 
 int OpenUsb2Dynamixel() {
   ///////// Open USB2Dynamixel ////////////
-  if(dxl_initialize(0, 1000000) == 0) {
+  if(dynamixel_api->dxl_initialize(0, 1000000) == 0) {
     printf( "Failed to open USB2Dynamixel!\n" );
     return -1;
   }
@@ -211,32 +217,40 @@ int OpenUsb2Dynamixel() {
 
 int main() {
   //int GoalPos[2] = {140, 884};
+  dynamixel_api = new dynamixel::Dynamixel();
 
   if (OpenUsb2Dynamixel() == -1)
     return 0;
 
   int id = 3;
 
-  printf("%d\n", dxl_read_byte(3, 5));
-  dxl_write_byte(3, 5, 1);
-  printf("%d\n", dxl_read_byte(3, 5));
-  printf("%d\n", dxl_read_byte(3, 4));
-  //dxl_write_byte(3, 4, 1);
-  //dxl_write_byte(id, 5, 250);
-  //printf("%d\n", dxl_read_byte(0, 4));
-  //printf("%d\n", dxl_read_byte(1, 4));
-  //printf("%d\n", dxl_read_byte(2, 4));
-  printf("%d\n", dxl_read_byte(3, 4));
+  printf("%d\n", dynamixel_api->dxl_read_byte(3, 5));
+  dynamixel_api->dxl_write_byte(3, 5, 1);
 
-  //dxl_write_byte(id, 4, 1);
-  //dxl_write_byte(id, 4, 34);
-  //printf("%d\n", dxl_read_byte(id, 4));
+      int status = dynamixel_api->dxl_get_result();
+
+      if (status != COMM_RXSUCCESS) {
+        PrintCommStatus(status);
+      }
+
+  printf("%d\n", dynamixel_api->dxl_read_byte(3, 5));
+  printf("%d\n", dynamixel_api->dxl_read_byte(3, 4));
+  //dynamixel_api->dxl_write_byte(3, 4, 1);
+  //dynamixel_api->dxl_write_byte(id, 5, 250);
+  //printf("%d\n", dynamixel_api->dxl_read_byte(0, 4));
+  //printf("%d\n", dynamixel_api->dxl_read_byte(1, 4));
+  //printf("%d\n", dynamixel_api->dxl_read_byte(2, 4));
+  printf("%d\n", dynamixel_api->dxl_read_byte(3, 4));
+
+  //dynamixel_api->dxl_write_byte(id, 4, 1);
+  //dynamixel_api->dxl_write_byte(id, 4, 34);
+  //printf("%d\n", dynamixel_api->dxl_read_byte(id, 4));
   //return 0;
 
   // MoveRoboticArm();
 
   //ID
-  //dxl_write_byte(id, 3, 2);
+  //dynamixel_api->dxl_write_byte(id, 3, 2);
 
   while (1) {
     printf("1 - Movement\n2 - FromTo\n3 - Read\n4 - Write\n");
@@ -264,7 +278,7 @@ int main() {
     }
   }
 
-  dxl_terminate();
+  dynamixel_api->dxl_terminate();
   return 0;
 }
 
@@ -303,24 +317,24 @@ void PrintCommStatus(int CommStatus) {
 
 // Print error bit of status packet
 void PrintErrorCode() {
-  if(dxl_get_rxpacket_error(ERRBIT_VOLTAGE) == 1)
+  if(dynamixel_api->dxl_get_rxpacket_error(ERRBIT_VOLTAGE) == 1)
     printf("Input voltage error!\n");
 
-  if(dxl_get_rxpacket_error(ERRBIT_ANGLE) == 1)
+  if(dynamixel_api->dxl_get_rxpacket_error(ERRBIT_ANGLE) == 1)
     printf("Angle limit error!\n");
 
-  if(dxl_get_rxpacket_error(ERRBIT_OVERHEAT) == 1)
+  if(dynamixel_api->dxl_get_rxpacket_error(ERRBIT_OVERHEAT) == 1)
     printf("Overheat error!\n");
 
-  if(dxl_get_rxpacket_error(ERRBIT_RANGE) == 1)
+  if(dynamixel_api->dxl_get_rxpacket_error(ERRBIT_RANGE) == 1)
     printf("Out of range error!\n");
 
-  if(dxl_get_rxpacket_error(ERRBIT_CHECKSUM) == 1)
+  if(dynamixel_api->dxl_get_rxpacket_error(ERRBIT_CHECKSUM) == 1)
     printf("Checksum error!\n");
 
-  if(dxl_get_rxpacket_error(ERRBIT_OVERLOAD) == 1)
+  if(dynamixel_api->dxl_get_rxpacket_error(ERRBIT_OVERLOAD) == 1)
     printf("Overload error!\n");
 
-  if(dxl_get_rxpacket_error(ERRBIT_INSTRUCTION) == 1)
+  if(dynamixel_api->dxl_get_rxpacket_error(ERRBIT_INSTRUCTION) == 1)
     printf("Instruction code error!\n");
 }

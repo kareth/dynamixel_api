@@ -1,6 +1,8 @@
 #include "serial.h"
 #include "../include/dynamixel.h"
 #include <string>
+#include "instruction_packet.h"
+#include <cstdio>
 
 #define ID					(2)
 #define LENGTH				(3)
@@ -9,17 +11,20 @@
 #define PARAMETER			(5)
 #define DEFAULT_BAUDNUMBER	(1)
 
-unsigned char gbInstructionPacket[MAXNUM_TXPARAM+10] = {0};
+namespace dynamixel {
+
+//unsigned char gbInstructionPacket[MAXNUM_TXPARAM+10] = {0};
 unsigned char gbStatusPacket[MAXNUM_RXPARAM+10] = {0};
 unsigned char gbRxPacketLength = 0;
 unsigned char gbRxGetLength = 0;
 int gbCommStatus = COMM_RXSUCCESS;
 int giBusUsing = 0;
 
-dynamixel::Serial* serial;
+Serial* serial;
+InstructionPacket iPacket;
 
-int dxl_initialize(int deviceIndex, int baudrate) {
-  serial = new dynamixel::Serial();
+int Dynamixel::dxl_initialize(int deviceIndex, int baudrate) {
+  serial = new Serial();
 
   if (serial->Open("/dev/ttymxc4", baudrate) == -1)
     return 0;
@@ -29,11 +34,12 @@ int dxl_initialize(int deviceIndex, int baudrate) {
   return 1;
 }
 
-void dxl_terminate(void) {
+void Dynamixel::dxl_terminate(void) {
   delete serial;
 }
 
-void dxl_tx_packet(void) {
+// Attempts to read a packet from dynamixel
+void Dynamixel::dxl_tx_packet(void) {
   unsigned char i;
   unsigned char TxNumByte, RealTxNumByte;
   unsigned char checksum = 0;
@@ -43,36 +49,42 @@ void dxl_tx_packet(void) {
 
   giBusUsing = 1;
 
-  if (gbInstructionPacket[LENGTH] > (MAXNUM_TXPARAM+2)) {
+  if (iPacket.length() > (MAXNUM_TXPARAM+2)) {
     gbCommStatus = COMM_TXERROR;
     giBusUsing = 0;
     return;
   }
 
-  if (gbInstructionPacket[INSTRUCTION] != INST_PING
-      && gbInstructionPacket[INSTRUCTION] != INST_READ
-      && gbInstructionPacket[INSTRUCTION] != INST_WRITE
-      && gbInstructionPacket[INSTRUCTION] != INST_REG_WRITE
-      && gbInstructionPacket[INSTRUCTION] != INST_ACTION
-      && gbInstructionPacket[INSTRUCTION] != INST_RESET
-      && gbInstructionPacket[INSTRUCTION] != INST_SYNC_WRITE) {
+  if (iPacket.instruction() != INST_PING
+      && iPacket.instruction() != INST_READ
+      && iPacket.instruction() != INST_WRITE
+      && iPacket.instruction() != INST_REG_WRITE
+      && iPacket.instruction() != INST_ACTION
+      && iPacket.instruction() != INST_RESET
+      && iPacket.instruction() != INST_SYNC_WRITE) {
     gbCommStatus = COMM_TXERROR;
     giBusUsing = 0;
     return;
   }
 
-  gbInstructionPacket[0] = 0xff;
-  gbInstructionPacket[1] = 0xff;
-  for (i = 0; i < (gbInstructionPacket[LENGTH]+1); i++)
+  // TODO necessary?
+  iPacket.clear();
+  //gbInstructionPacket[0] = 0xff;
+  //gbInstructionPacket[1] = 0xff;
+
+  iPacket.GenerateChecksum();
+
+  /*for (i = 0; i < (gbInstructionPacket[LENGTH]+1); i++)
     checksum += gbInstructionPacket[i+2];
 
-  gbInstructionPacket[gbInstructionPacket[LENGTH]+3] = ~checksum;
+  gbInstructionPacket[gbInstructionPacket[LENGTH]+3] = ~checksum;*/
 
   if (gbCommStatus == COMM_RXTIMEOUT || gbCommStatus == COMM_RXCORRUPT)
     serial->Flush();
 
-  TxNumByte = gbInstructionPacket[LENGTH] + 4;
-  RealTxNumByte = serial->Write((unsigned char*)gbInstructionPacket, TxNumByte);
+  TxNumByte = iPacket.length() + 4;
+  //RealTxNumByte = serial->Write((unsigned char*)gbInstructionPacket, TxNumByte);
+  RealTxNumByte = serial->Write((unsigned char*)iPacket.data(), TxNumByte);
 
   if (TxNumByte != RealTxNumByte) {
     gbCommStatus = COMM_TXFAIL;
@@ -80,22 +92,23 @@ void dxl_tx_packet(void) {
     return;
   }
 
-  if (gbInstructionPacket[INSTRUCTION] == INST_READ)
-    serial->SetTimeout(gbInstructionPacket[PARAMETER+1] + 6);
+  //if (gbInstructionPacket[INSTRUCTION] == INST_READ)
+  if (iPacket.instruction() == INST_READ)
+    serial->SetTimeout(iPacket.parameter(1) + 6);
   else
     serial->SetTimeout(6);
 
   gbCommStatus = COMM_TXSUCCESS;
 }
 
-void dxl_rx_packet(void) {
+void Dynamixel::dxl_rx_packet(void) {
   unsigned char i, j, nRead;
   unsigned char checksum = 0;
 
   if( giBusUsing == 0 )
     return;
 
-  if (gbInstructionPacket[ID] == BROADCAST_ID) {
+  if (iPacket.id() == BROADCAST_ID) {
     gbCommStatus = COMM_RXSUCCESS;
     giBusUsing = 0;
     return;
@@ -139,7 +152,7 @@ void dxl_rx_packet(void) {
   }
 
   // Check id pairing
-  if (gbInstructionPacket[ID] != gbStatusPacket[ID]) {
+  if (iPacket.id() != gbStatusPacket[ID]) {
     gbCommStatus = COMM_RXCORRUPT;
     giBusUsing = 0;
     return;
@@ -170,7 +183,7 @@ void dxl_rx_packet(void) {
   giBusUsing = 0;
 }
 
-void dxl_txrx_packet(void) {
+void Dynamixel::dxl_txrx_packet(void) {
   dxl_tx_packet();
 
   if (gbCommStatus != COMM_TXSUCCESS)
@@ -181,42 +194,47 @@ void dxl_txrx_packet(void) {
   } while (gbCommStatus == COMM_RXWAITING);
 }
 
-int dxl_get_result(void) {
+int Dynamixel::dxl_get_result(void) {
   return gbCommStatus;
 }
 
-void dxl_set_txpacket_id(int id) {
-  gbInstructionPacket[ID] = (unsigned char)id;
+/*
+void Dynamixel::dxl_set_txpacket_id(int id) {
+  iPacket.set_id(id);
 }
 
-void dxl_set_txpacket_instruction(int instruction) {
-  gbInstructionPacket[INSTRUCTION] = (unsigned char)instruction;
+void Dynamixel::dxl_set_txpacket_instruction(int instruction) {
+  iPacket.set_instruction(instruction);
 }
 
-void dxl_set_txpacket_parameter(int index, int value) {
-  gbInstructionPacket[PARAMETER+index] = (unsigned char)value;
+void Dynamixel::dxl_set_txpacket_parameter(int index, int value) {
+  iPacket.set_parameter(index, value);
 }
 
-void dxl_set_txpacket_length(int length) {
-  gbInstructionPacket[LENGTH] = (unsigned char)length;
+void Dynamixel::dxl_set_txpacket_length(int length) {
+  iPacket.set_length(length);
 }
-
-int dxl_get_rxpacket_error(int errbit) {
+*/
+// STATUS
+int Dynamixel::dxl_get_rxpacket_error(int errbit) {
   if( gbStatusPacket[ERRBIT] & (unsigned char)errbit )
     return 1;
 
   return 0;
 }
 
-int dxl_get_rxpacket_length(void) {
+// STATUS
+int Dynamixel::dxl_get_rxpacket_length(void) {
   return (int)gbStatusPacket[LENGTH];
 }
 
-int dxl_get_rxpacket_parameter(int index) {
+// STATUS
+int Dynamixel::dxl_get_rxpacket_parameter(int index) {
   return (int)gbStatusPacket[PARAMETER+index];
 }
 
-int dxl_makeword(int lowbyte, int highbyte) {
+// Calculates value based on lower and higher 8 bits
+int Dynamixel::dxl_makeword(int lowbyte, int highbyte) {
   unsigned short word;
 
   word = highbyte;
@@ -225,14 +243,16 @@ int dxl_makeword(int lowbyte, int highbyte) {
   return (int)word;
 }
 
-int dxl_get_lowbyte(int word) {
+// Transforms value to lower 8 bits and higher
+int Dynamixel::dxl_get_lowbyte(int word) {
   unsigned short temp;
 
   temp = word & 0xff;
   return (int)temp;
 }
 
-int dxl_get_highbyte(int word) {
+// Transforms value to lower 8 bits and higher
+int Dynamixel::dxl_get_highbyte(int word) {
   unsigned short temp;
 
   temp = word & 0xff00;
@@ -240,65 +260,56 @@ int dxl_get_highbyte(int word) {
   return (int)temp;
 }
 
-void dxl_ping(int id) {
+// Pings certain ID
+void Dynamixel::dxl_ping(int id) {
   while(giBusUsing);
-
-  gbInstructionPacket[ID] = (unsigned char)id;
-  gbInstructionPacket[INSTRUCTION] = INST_PING;
-  gbInstructionPacket[LENGTH] = 2;
-
+  iPacket.set_attr(id, 2, INST_PING);
   dxl_txrx_packet();
 }
 
-int dxl_read_byte(int id, int address) {
+
+// Reads one byte
+int Dynamixel::dxl_read_byte(int id, int address) {
   while(giBusUsing);
 
-  gbInstructionPacket[ID] = (unsigned char)id;
-  gbInstructionPacket[INSTRUCTION] = INST_READ;
-  gbInstructionPacket[PARAMETER] = (unsigned char)address;
-  gbInstructionPacket[PARAMETER+1] = 1;
-  gbInstructionPacket[LENGTH] = 4;
 
+  iPacket.set_attr(id, 4, INST_READ);
+  iPacket.set_parameter(0, address);
+  iPacket.set_parameter(1, 1);
   dxl_txrx_packet();
 
   return (int)gbStatusPacket[PARAMETER];
 }
 
-void dxl_write_byte(int id, int address, int value) {
+// Writes one byte
+void Dynamixel::dxl_write_byte(int id, int address, int value) {
   while(giBusUsing);
 
-  gbInstructionPacket[ID] = (unsigned char)id;
-  gbInstructionPacket[INSTRUCTION] = INST_WRITE;
-  gbInstructionPacket[PARAMETER] = (unsigned char)address;
-  gbInstructionPacket[PARAMETER+1] = (unsigned char)value;
-  gbInstructionPacket[LENGTH] = 4;
-
+  iPacket.set_attr(id, 4, INST_WRITE);
+  iPacket.set_parameter(0, address);
+  iPacket.set_parameter(1, value);
   dxl_txrx_packet();
 }
 
-int dxl_read_word(int id, int address) {
+// Reads 2 bytes
+int Dynamixel::dxl_read_word(int id, int address) {
   while(giBusUsing);
-
-  gbInstructionPacket[ID] = (unsigned char)id;
-  gbInstructionPacket[INSTRUCTION] = INST_READ;
-  gbInstructionPacket[PARAMETER] = (unsigned char)address;
-  gbInstructionPacket[PARAMETER+1] = 2;
-  gbInstructionPacket[LENGTH] = 4;
-
+  iPacket.set_attr(id, 4, INST_READ);
+  iPacket.set_parameter(0, address);
+  iPacket.set_parameter(1, 2);
   dxl_txrx_packet();
 
   return dxl_makeword((int)gbStatusPacket[PARAMETER], (int)gbStatusPacket[PARAMETER+1]);
 }
 
-void dxl_write_word(int id, int address, int value) {
+// Writes 2 bytes
+void Dynamixel::dxl_write_word(int id, int address, int value) {
   while(giBusUsing);
-
-  gbInstructionPacket[ID] = (unsigned char)id;
-  gbInstructionPacket[INSTRUCTION] = INST_WRITE;
-  gbInstructionPacket[PARAMETER] = (unsigned char)address;
-  gbInstructionPacket[PARAMETER+1] = (unsigned char)dxl_get_lowbyte(value);
-  gbInstructionPacket[PARAMETER+2] = (unsigned char)dxl_get_highbyte(value);
-  gbInstructionPacket[LENGTH] = 5;
-
+  iPacket.set_attr(id, 5, INST_WRITE);
+  iPacket.set_parameter(0, address);
+  iPacket.set_parameter(1, dxl_get_lowbyte(value));
+  iPacket.set_parameter(2, dxl_get_highbyte(value));
   dxl_txrx_packet();
 }
+
+}  // namespace dynamixel

@@ -1,20 +1,25 @@
-#ifndef _DYNAMIXEL_HEADER
-#define _DYNAMIXEL_HEADER
+#ifndef DYNAMIXEL_DYNAMIXEL_H_
+#define DYNAMIXEL_DYNAMIXEL_H_
+
+namespace dynamixel {
+
+class Dynamixel {
+
+ public:
+
+  ///////////// device control methods ////////////////////////
+  int dxl_initialize(int deviceIndex, int baudnum );
+  void dxl_terminate();
 
 
-///////////// device control methods ////////////////////////
-int dxl_initialize(int deviceIndex, int baudnum );
-void dxl_terminate();
-
-
-///////////// set/get packet methods //////////////////////////
+  ///////////// set/get packet methods //////////////////////////
 #define MAXNUM_TXPARAM		(150)
 #define MAXNUM_RXPARAM		(60)
 
-void dxl_set_txpacket_id(int id);
+  void dxl_set_txpacket_id(int id);
 #define BROADCAST_ID		(254)
 
-void dxl_set_txpacket_instruction(int instruction);
+  void dxl_set_txpacket_instruction(int instruction);
 #define INST_PING			(1)
 #define INST_READ			(2)
 #define INST_WRITE			(3)
@@ -23,10 +28,10 @@ void dxl_set_txpacket_instruction(int instruction);
 #define INST_RESET			(6)
 #define INST_SYNC_WRITE		(131)
 
-void dxl_set_txpacket_parameter(int index, int value);
-void dxl_set_txpacket_length(int length);
+  void dxl_set_txpacket_parameter(int index, int value);
+  void dxl_set_txpacket_length(int length);
 
-int dxl_get_rxpacket_error(int errbit);
+  int dxl_get_rxpacket_error(int errbit);
 #define ERRBIT_VOLTAGE		(1)
 #define ERRBIT_ANGLE		(2)
 #define ERRBIT_OVERHEAT		(4)
@@ -35,22 +40,22 @@ int dxl_get_rxpacket_error(int errbit);
 #define ERRBIT_OVERLOAD		(32)
 #define ERRBIT_INSTRUCTION	(64)
 
-int dxl_get_rxpacket_length(void);
-int dxl_get_rxpacket_parameter(int index);
+  int dxl_get_rxpacket_length(void);
+  int dxl_get_rxpacket_parameter(int index);
 
 
-// utility for value
-int dxl_makeword(int lowbyte, int highbyte);
-int dxl_get_lowbyte(int word);
-int dxl_get_highbyte(int word);
+  // utility for value
+  int dxl_makeword(int lowbyte, int highbyte);
+  int dxl_get_lowbyte(int word);
+  int dxl_get_highbyte(int word);
 
 
-////////// packet communication methods ///////////////////////
-void dxl_tx_packet(void);
-void dxl_rx_packet(void);
-void dxl_txrx_packet(void);
+  ////////// packet communication methods ///////////////////////
+  void dxl_tx_packet(void);
+  void dxl_rx_packet(void);
+  void dxl_txrx_packet(void);
 
-int dxl_get_result(void);
+  int dxl_get_result(void);
 #define	COMM_TXSUCCESS		(0)
 #define COMM_RXSUCCESS		(1)
 #define COMM_TXFAIL		(2)
@@ -61,11 +66,14 @@ int dxl_get_result(void);
 #define COMM_RXCORRUPT		(7)
 
 
-//////////// high communication methods ///////////////////////
-void dxl_ping(int id);
-int dxl_read_byte(int id, int address);
-void dxl_write_byte(int id, int address, int value);
-int dxl_read_word(int id, int address);
-void dxl_write_word(int id, int address, int value);
+  //////////// high communication methods ///////////////////////
+  void dxl_ping(int id);
+  int dxl_read_byte(int id, int address);
+  void dxl_write_byte(int id, int address, int value);
+  int dxl_read_word(int id, int address);
+  void dxl_write_word(int id, int address, int value);
+};
 
-#endif
+}  // namespace dynamixel
+
+#endif  // DYNAMIXEL_DYNAMIXEL_H_
