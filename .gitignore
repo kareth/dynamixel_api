@@ -3,5 +3,8 @@
 src/*.o
 *.o
 
+lib/libdxl.a
+src/libdxl.a
 example/DataCheck/DataCheck
+example/DataCheck/DataCheck.o
 example/SyncWrite/SyncWrite
