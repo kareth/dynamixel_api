@@ -1,18 +1,18 @@
 TARGET		= DataCheck
 OBJS		= DataCheck.o
-SRCS		= $(OBJS:.o=.c)
+SRCS		= $(OBJS:.o=.cpp)
 INCLUDEDIRS	+= -I../../include
 LIBDIRS		+= -L../../lib
-CFLAGS		= $(INCLUDEDIRS) -W -Wall -O2 -std=c++0x
+CXXFLAGS	= $(INCLUDEDIRS) -W -Wall -O2 -std=c++0x
 LDFLAGS		= $(LIBDIRS) -lm -ldxl
 
-CC			= g++
+CXX			= g++
 
 $(TARGET): $(OBJS)
-	$(CC) -o $@ $^ $(LDFLAGS)
+	$(CXX) -o $@ $^ $(LDFLAGS)
 	
 .c.o:
-	$(CC) -c $< $(CFLAGS)
+	$(CXX) -c $< $(CXXFLAGS)
 	
 clean:
 	rm -f $(OBJS) $(TARGET)

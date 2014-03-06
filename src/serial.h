@@ -1,12 +1,11 @@
-#ifndef _DYNAMIXEL_HAL_HEADER
-#define _DYNAMIXEL_HAL_HEADER
+#ifndef DYNAMIXEL_SERIAL_H_
+#define DYNAMIXEL_SERIAL_H_
 
+#include <string>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace dynamixel {
 
-int dxl_hal_open(int deviceIndex, float baudrate);
+int dxl_hal_open(const std::string& device, int baudrate);
 void dxl_hal_close();
 int dxl_hal_set_baud(float baudrate);
 void dxl_hal_clear();
@@ -15,8 +14,6 @@ int dxl_hal_rx(unsigned char *pPacket, int numPacket);
 void dxl_hal_set_timeout(int NumRcvByte);
 int dxl_hal_timeout();
 
-#ifdef __cplusplus
-}
-#endif
+}  // namespace dynamixel
 
-#endif
+#endif  // DYNAMIXEL_SERIAL_H_

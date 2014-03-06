@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <termios.h>
 #include <unistd.h>
-#include <dynamixel.h>
+#include "../../include/dynamixel.h"
 #include <cmath>
 #include <stdlib.h>
 #include <chrono>
@@ -199,7 +199,7 @@ void MoveRoboticArm() {
 
 int OpenUsb2Dynamixel() {
   ///////// Open USB2Dynamixel ////////////
-  if(dxl_initialize(0, 1) == 0) {
+  if(dxl_initialize(0, 1000000) == 0) {
     printf( "Failed to open USB2Dynamixel!\n" );
     return -1;
   }

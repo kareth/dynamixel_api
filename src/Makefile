@@ -1,11 +1,11 @@
 TARGET		= libdxl.a
-OBJS		= dxl_hal.o dynamixel.o
-SRCS		= $(OBJS:.o=.c)
+OBJS		= serial.o dynamixel.o
+SRCS		= $(OBJS:.o=.cpp)
 INCLUDEDIRS	+= -I../include
 LIBDIRS		+= 
-CFLAGS		= $(INCLUDEDIRS) -W -Wall -O2
+CFLAGS		= $(INCLUDEDIRS) -W -Wall -O2 - std=c++0x
 
-CC			= gcc
+CC			= g++
 AR			= ar
 
 $(TARGET): $(OBJS)

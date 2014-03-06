@@ -1,10 +1,6 @@
 #ifndef _DYNAMIXEL_HEADER
 #define _DYNAMIXEL_HEADER
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 
 ///////////// device control methods ////////////////////////
 int dxl_initialize(int deviceIndex, int baudnum );
@@ -71,10 +67,5 @@ int dxl_read_byte(int id, int address);
 void dxl_write_byte(int id, int address, int value);
 int dxl_read_word(int id, int address);
 void dxl_write_word(int id, int address, int value);
-
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

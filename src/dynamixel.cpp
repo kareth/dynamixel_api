@@ -1,5 +1,6 @@
-#include "dxl_hal.h"
-#include "dynamixel.h"
+#include "serial.h"
+#include "../include/dynamixel.h"
+#include <string>
 
 #define ID					(2)
 #define LENGTH				(3)
@@ -18,9 +19,10 @@ int giBusUsing = 0;
 
 int dxl_initialize(int deviceIndex, int baudnum ) {
   float baudrate;
-  baudrate = 2000000.0f / (float)(baudnum + 1);
+  //baudrate = 2000000.0f / (float)(baudnum + 1);
 
-  if (dxl_hal_open(deviceIndex, baudrate) == 0)
+  std::string dev = "/dev/ttymxc4";
+  if (dynamixel::dxl_hal_open(dev, baudnum) == -1)
     return 0;
 
   gbCommStatus = COMM_RXSUCCESS;
@@ -29,7 +31,7 @@ int dxl_initialize(int deviceIndex, int baudnum ) {
 }
 
 void dxl_terminate(void) {
-  dxl_hal_close();
+  dynamixel::dxl_hal_close();
 }
 
 void dxl_tx_packet(void) {
@@ -68,10 +70,10 @@ void dxl_tx_packet(void) {
   gbInstructionPacket[gbInstructionPacket[LENGTH]+3] = ~checksum;
 
   if (gbCommStatus == COMM_RXTIMEOUT || gbCommStatus == COMM_RXCORRUPT)
-    dxl_hal_clear();
+    dynamixel::dxl_hal_clear();
 
   TxNumByte = gbInstructionPacket[LENGTH] + 4;
-  RealTxNumByte = dxl_hal_tx((unsigned char*)gbInstructionPacket, TxNumByte);
+  RealTxNumByte = dynamixel::dxl_hal_tx((unsigned char*)gbInstructionPacket, TxNumByte);
 
   if (TxNumByte != RealTxNumByte) {
     gbCommStatus = COMM_TXFAIL;
@@ -80,9 +82,9 @@ void dxl_tx_packet(void) {
   }
 
   if (gbInstructionPacket[INSTRUCTION] == INST_READ)
-    dxl_hal_set_timeout(gbInstructionPacket[PARAMETER+1] + 6);
+    dynamixel::dxl_hal_set_timeout(gbInstructionPacket[PARAMETER+1] + 6);
   else
-    dxl_hal_set_timeout(6);
+    dynamixel::dxl_hal_set_timeout(6);
 
   gbCommStatus = COMM_TXSUCCESS;
 }
@@ -105,10 +107,10 @@ void dxl_rx_packet(void) {
     gbRxPacketLength = 6;
   }
 
-  nRead = dxl_hal_rx((unsigned char*)&gbStatusPacket[gbRxGetLength], gbRxPacketLength - gbRxGetLength);
+  nRead = dynamixel::dxl_hal_rx((unsigned char*)&gbStatusPacket[gbRxGetLength], gbRxPacketLength - gbRxGetLength);
   gbRxGetLength += nRead;
   if(gbRxGetLength < gbRxPacketLength) {
-    if (dxl_hal_timeout() == 1) {
+    if (dynamixel::dxl_hal_timeout() == 1) {
       if (gbRxGetLength == 0)
         gbCommStatus = COMM_RXTIMEOUT;
       else
@@ -146,7 +148,7 @@ void dxl_rx_packet(void) {
 
   gbRxPacketLength = gbStatusPacket[LENGTH] + 4;
   if (gbRxGetLength < gbRxPacketLength) {
-    nRead = dxl_hal_rx((unsigned char*)&gbStatusPacket[gbRxGetLength], gbRxPacketLength - gbRxGetLength);
+    nRead = dynamixel::dxl_hal_rx((unsigned char*)&gbStatusPacket[gbRxGetLength], gbRxPacketLength - gbRxGetLength);
     gbRxGetLength += nRead;
     if (gbRxGetLength < gbRxPacketLength) {
       gbCommStatus = COMM_RXWAITING;
