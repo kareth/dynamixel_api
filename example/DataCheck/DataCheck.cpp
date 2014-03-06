@@ -90,7 +90,7 @@ void TestMovingSpeed(int dynamixel_id, int speed) {
 
   SetSpeed(dynamixel_id, speed);
 
-  int iterations = 2;
+  int iterations = 4;
   printf("Iterations: %d\n", iterations);
 
   auto start = std::chrono::system_clock::now();
@@ -242,8 +242,14 @@ int main() {
     printf("1 - Movement\n2 - FromTo\n3 - Read\n4 - Write\n");
     int n;
     scanf("%d",&n);
-    if (n == 1)
-      TestMovingSpeed(id, 200);
+    if (n == 1) {
+      printf("What speed?\n");
+      int speed;
+      scanf("%d", &speed);
+      if (speed < 0 || speed > 1023)
+        continue;
+      TestMovingSpeed(id, speed);
+    }
     if (n == 2)
       FromTo(id, 140, 884, 0);
     if (n == 3)

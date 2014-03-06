@@ -22,10 +22,58 @@ Serial::Serial()
 }
 
 Serial::~Serial() {
-  dxl_hal_close();
+  Close();
 }
 
-int Serial::GetBaudRate(int baudrate){
+int Serial::Open(const std::string& device, int baudrate) {
+  struct termios newtio;
+  memset(&newtio, 0, sizeof(newtio));
+
+  Close();
+
+  if ((socket_fd_ = open(device.c_str(), O_RDWR|O_NOCTTY|O_NONBLOCK)) < 0) {
+    fprintf(stderr, "device open error: %s\n", device.c_str());
+    return -1;
+  }
+
+  int baud = GetBaudRateConst(baudrate);
+  if (baud == -1)
+    return -1;
+
+  newtio.c_cflag     = baud | CS8 | CLOCAL | CREAD;
+  newtio.c_iflag     = IGNPAR;
+  newtio.c_oflag     = 0;
+  newtio.c_lflag     = 0;
+  newtio.c_cc[VTIME] = 0;
+  newtio.c_cc[VMIN]  = 0;
+
+  tcflush(socket_fd_, TCIFLUSH);
+  tcsetattr(socket_fd_, TCSANOW, &newtio);
+
+  return 0;
+}
+
+void Serial::Close() {
+  if (socket_fd_ != -1)
+    close(socket_fd_);
+  socket_fd_ = -1;
+}
+
+void Serial::Flush(void) {
+  tcflush(socket_fd_, TCIFLUSH);
+}
+
+int Serial::Write(unsigned char *pPacket, int numPacket) {
+  return write(socket_fd_, pPacket, numPacket);
+}
+
+int Serial::Read(unsigned char *pPacket, int numPacket) {
+  // TODO this memset is probably not necessary
+  memset(pPacket, 0, numPacket);
+  return read(socket_fd_, pPacket, numPacket);
+}
+
+int Serial::GetBaudRateConst(int baudrate){
   switch (baudrate) {
     case 9600: return B9600;
     case 19200: return B19200;
@@ -50,53 +98,6 @@ int Serial::GetBaudRate(int baudrate){
   }
 }
 
-int Serial::dxl_hal_open(const std::string& device, int baudrate) {
-  struct termios newtio;
-  memset(&newtio, 0, sizeof(newtio));
-
-  dxl_hal_close();
-
-  if((socket_fd_ = open(device.c_str(), O_RDWR|O_NOCTTY|O_NONBLOCK)) < 0) {
-    fprintf(stderr, "device open error: %s\n", device.c_str());
-    return -1;
-  }
-
-  int baud = GetBaudRate(baudrate);
-  if (baud == -1) return -1;
-
-  newtio.c_cflag     = baud | CS8 | CLOCAL | CREAD;
-  newtio.c_iflag     = IGNPAR;
-  newtio.c_oflag     = 0;
-  newtio.c_lflag     = 0;
-  newtio.c_cc[VTIME] = 0;
-  newtio.c_cc[VMIN]  = 0;
-
-  tcflush(socket_fd_, TCIFLUSH);
-  tcsetattr(socket_fd_, TCSANOW, &newtio);
-
-  return 0;
-}
-
-void Serial::dxl_hal_close() {
-  if(socket_fd_ != -1)
-    close(socket_fd_);
-  socket_fd_ = -1;
-}
-
-void Serial::dxl_hal_clear(void) {
-  tcflush(socket_fd_, TCIFLUSH);
-}
-
-int Serial::dxl_hal_tx( unsigned char *pPacket, int numPacket ) {
-  return write(socket_fd_, pPacket, numPacket);
-}
-
-int Serial::dxl_hal_rx( unsigned char *pPacket, int numPacket ) {
-  // TODO this memset is probably not necessary
-  memset(pPacket, 0, numPacket);
-  return read(socket_fd_, pPacket, numPacket);
-}
-
 // TODO timeouts should go away
 static inline long myclock() {
   struct timeval tv;
@@ -104,19 +105,19 @@ static inline long myclock() {
   return (tv.tv_sec * 1000 + tv.tv_usec / 1000);
 }
 
-void Serial::dxl_hal_set_timeout(int NumRcvByte) {
+void Serial::SetTimeout(int NumRcvByte) {
   glStartTime_ = myclock();
   gfRcvWaitTime_ = (float)(gfByteTransTime_*(float)NumRcvByte + 2.0 * LATENCY_TIME + 0.0f);
 }
 
-int Serial::dxl_hal_timeout(void) {
+int Serial::Timeout() {
   long time;
 
   time = myclock() - glStartTime_;
 
-  if(time > gfRcvWaitTime_)
+  if (time > gfRcvWaitTime_)
     return 1;
-  else if(time < 0)
+  else if (time < 0)
     glStartTime_ = myclock();
 
   return 0;

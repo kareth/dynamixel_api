@@ -9,19 +9,22 @@ class Serial {
  public:
   Serial();
   ~Serial();
-  int dxl_hal_open(const std::string& device, int baudrate);
-  void dxl_hal_close();
-  int dxl_hal_set_baud(float baudrate);
-  void dxl_hal_clear();
-  int dxl_hal_tx(unsigned char *pPacket, int numPacket);
-  int dxl_hal_rx(unsigned char *pPacket, int numPacket);
-  void dxl_hal_set_timeout(int NumRcvByte);
-  int dxl_hal_timeout();
+  int Open(const std::string& device, int baudrate);
+  void Close();
+  void Flush();
+  int Write(unsigned char *pPacket, int numPacket);
+  int Read(unsigned char *pPacket, int numPacket);
+
+  // TODO to remove
+  void SetTimeout(int NumRcvByte);
+  int Timeout();
 
  private:
-  int GetBaudRate(int baudrate);
+  int GetBaudRateConst(int baudrate);
 
   int socket_fd_;
+
+  // TODO to remove
   long glStartTime_;
   float	gfRcvWaitTime_;
   float	gfByteTransTime_;

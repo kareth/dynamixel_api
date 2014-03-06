@@ -18,14 +18,10 @@ int giBusUsing = 0;
 
 dynamixel::Serial* serial;
 
-int dxl_initialize(int deviceIndex, int baudnum ) {
-  float baudrate;
-  //baudrate = 2000000.0f / (float)(baudnum + 1);
-
-  std::string dev = "/dev/ttymxc4";
+int dxl_initialize(int deviceIndex, int baudrate) {
   serial = new dynamixel::Serial();
 
-  if (serial->dxl_hal_open(dev, baudnum) == -1)
+  if (serial->Open("/dev/ttymxc4", baudrate) == -1)
     return 0;
 
   gbCommStatus = COMM_RXSUCCESS;
@@ -73,10 +69,10 @@ void dxl_tx_packet(void) {
   gbInstructionPacket[gbInstructionPacket[LENGTH]+3] = ~checksum;
 
   if (gbCommStatus == COMM_RXTIMEOUT || gbCommStatus == COMM_RXCORRUPT)
-    serial->dxl_hal_clear();
+    serial->Flush();
 
   TxNumByte = gbInstructionPacket[LENGTH] + 4;
-  RealTxNumByte = serial->dxl_hal_tx((unsigned char*)gbInstructionPacket, TxNumByte);
+  RealTxNumByte = serial->Write((unsigned char*)gbInstructionPacket, TxNumByte);
 
   if (TxNumByte != RealTxNumByte) {
     gbCommStatus = COMM_TXFAIL;
@@ -85,9 +81,9 @@ void dxl_tx_packet(void) {
   }
 
   if (gbInstructionPacket[INSTRUCTION] == INST_READ)
-    serial->dxl_hal_set_timeout(gbInstructionPacket[PARAMETER+1] + 6);
+    serial->SetTimeout(gbInstructionPacket[PARAMETER+1] + 6);
   else
-    serial->dxl_hal_set_timeout(6);
+    serial->SetTimeout(6);
 
   gbCommStatus = COMM_TXSUCCESS;
 }
@@ -110,10 +106,10 @@ void dxl_rx_packet(void) {
     gbRxPacketLength = 6;
   }
 
-  nRead = serial->dxl_hal_rx((unsigned char*)&gbStatusPacket[gbRxGetLength], gbRxPacketLength - gbRxGetLength);
+  nRead = serial->Read((unsigned char*)&gbStatusPacket[gbRxGetLength], gbRxPacketLength - gbRxGetLength);
   gbRxGetLength += nRead;
   if(gbRxGetLength < gbRxPacketLength) {
-    if (serial->dxl_hal_timeout() == 1) {
+    if (serial->Timeout() == 1) {
       if (gbRxGetLength == 0)
         gbCommStatus = COMM_RXTIMEOUT;
       else
@@ -151,7 +147,7 @@ void dxl_rx_packet(void) {
 
   gbRxPacketLength = gbStatusPacket[LENGTH] + 4;
   if (gbRxGetLength < gbRxPacketLength) {
-    nRead = serial->dxl_hal_rx((unsigned char*)&gbStatusPacket[gbRxGetLength], gbRxPacketLength - gbRxGetLength);
+    nRead = serial->Read((unsigned char*)&gbStatusPacket[gbRxGetLength], gbRxPacketLength - gbRxGetLength);
     gbRxGetLength += nRead;
     if (gbRxGetLength < gbRxPacketLength) {
       gbCommStatus = COMM_RXWAITING;
