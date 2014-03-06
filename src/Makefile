@@ -2,10 +2,10 @@ TARGET		= libdxl.a
 OBJS		= serial.o dynamixel.o
 SRCS		= $(OBJS:.o=.cpp)
 INCLUDEDIRS	+= -I../include
-LIBDIRS		+= 
+LIBDIRS		+=
 CFLAGS		= $(INCLUDEDIRS) -W -Wall -O2 - std=c++0x
 
-CC			= g++
+CXX			= g++
 AR			= ar
 
 $(TARGET): $(OBJS)
@@ -13,7 +13,7 @@ $(TARGET): $(OBJS)
 	cp $(TARGET) ../lib
 	
 .c.o:
-	$(CC) -c $< $(CFLAGS)
+	$(CXX) -c $< $(CFLAGS)
 	
 clean:
 	rm -f $(OBJS) $(TARGET)
