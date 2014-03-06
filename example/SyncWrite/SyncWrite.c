@@ -11,7 +11,6 @@
 #include <dynamixel.h>
 
 #define PI	3.141592f
-#define NUM_ACTUATOR		3
 
 // Control table address
 #define P_GOAL_POSITION_L	30
@@ -21,7 +20,7 @@
 
 // Defulat setting
 #define DEFAULT_BAUDNUM		1 // 1Mbps
-#define NUM_ACTUATOR		3 // Number of actuator
+#define NUM_ACTUATOR		2 // Number of actuator
 #define STEP_THETA			(PI / 100.0f) // Large value is more fast
 #define CONTROL_PERIOD		(10000) // usec (Large value is more slow) 
 

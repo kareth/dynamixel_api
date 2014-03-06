@@ -3,36 +3,35 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <termios.h>
-//#include <linux/serial.h>
-#include <fcntl.h>
-#include <termios.h>
+#include <linux/serial.h>
+//#include <fcntl.h>
 
 
 #include <sys/ioctl.h>
 #include <sys/time.h>
+
 #include "dxl_hal.h"
 
-#define LATENCY_TIME        (16)
+#define LATENCY_TIME        (4)
 
 int	gSocket_fd	= -1;
 long	glStartTime	= 0;
 float	gfRcvWaitTime	= 0.0f;
 float	gfByteTransTime	= 0.0f;
 
-char	gDeviceName[40];
+char	gDeviceName[20];
 
 int dxl_hal_open(int deviceIndex, float baudrate)
 {
-  printf("baudrate: %f\n", baudrate);
-
-  struct termios tty;
-  //struct serial_struct serinfo;
+  struct termios newtio;
+  struct serial_struct serinfo;
   char dev_name[100] = {0, };
 
-  sprintf(dev_name, "/dev/tty.usbserial-A9QPXR73");
-  strcpy(gDeviceName, dev_name);
+  //sprintf(dev_name, "/dev/ttyUSB%d", deviceIndex);
+  sprintf(dev_name, "/dev/ttymxc4", deviceIndex);
 
-  memset(&tty, 0, sizeof(tty));
+  strcpy(gDeviceName, dev_name);
+  memset(&newtio, 0, sizeof(newtio));
   dxl_hal_close();
 
   if((gSocket_fd = open(gDeviceName, O_RDWR|O_NOCTTY|O_NONBLOCK)) < 0) {
@@ -40,43 +39,20 @@ int dxl_hal_open(int deviceIndex, float baudrate)
     goto DXL_HAL_OPEN_ERROR;
   }
 
-
-  /* Set Baud Rate */
-  cfsetospeed (&tty, (speed_t)B57600);
-  cfsetispeed (&tty, (speed_t)B57600);
-
-  /* Setting other Port Stuff */
-  //tty.c_cflag     &=  ~PARENB;        // Make 8n1
-  tty.c_cflag     &=  ~CSTOPB;
-  tty.c_cflag     &=  ~CSIZE;
-
-  tty.c_cflag     |=  CS8;
-  tty.c_cflag     |=  CLOCAL;
-  tty.c_cflag     |=  CREAD;
-
-  //tty.c_iflag     |=  IGNPAR;
-  //tty.c_oflag     =  0;
-  //tty.c_lflag	  = 0;
-
-  //tty.c_cc[VTIME]	= 0;
-  //tty.c_cc[VMIN]	= 0;
-
-  /*newtio.c_cflag		= B38400|CS8|CLOCAL|CREAD;
+  newtio.c_cflag		= B1000000|CS8|CLOCAL|CREAD;
   newtio.c_iflag		= IGNPAR;
   newtio.c_oflag		= 0;
   newtio.c_lflag		= 0;
   newtio.c_cc[VTIME]	= 0;	// time-out 값 (TIME * 0.1초) 0 : disable
   newtio.c_cc[VMIN]	= 0;	// MIN 은 read 가 return 되기 위한 최소 문자 개수
-*/
 
-  //tcflush(gSocket_fd, TCIFLUSH);
-  tcsetattr(gSocket_fd, TCSANOW, &tty);
+  tcflush(gSocket_fd, TCIFLUSH);
+  tcsetattr(gSocket_fd, TCSANOW, &newtio);
 
   if(gSocket_fd == -1)
     return 0;
 
-
-  /*if(ioctl(gSocket_fd, TIOCGSERIAL, &serinfo) < 0) {
+  if(ioctl(gSocket_fd, TIOCGSERIAL, &serinfo) < 0) {
     fprintf(stderr, "Cannot get serial info\n");
     return 0;
   }
@@ -89,6 +65,7 @@ int dxl_hal_open(int deviceIndex, float baudrate)
     fprintf(stderr, "Cannot set serial info\n");
     return 0;
   }
+
   dxl_hal_close();
 
   gfByteTransTime = (float)((1000.0f / baudrate) * 12.0f);
@@ -102,7 +79,7 @@ int dxl_hal_open(int deviceIndex, float baudrate)
     goto DXL_HAL_OPEN_ERROR;
   }
 
-  newtio.c_cflag		= B38400|CS8|CLOCAL|CREAD;
+  newtio.c_cflag		= B1000000|CS8|CLOCAL|CREAD;
   newtio.c_iflag		= IGNPAR;
   newtio.c_oflag		= 0;
   newtio.c_lflag		= 0;
@@ -112,7 +89,6 @@ int dxl_hal_open(int deviceIndex, float baudrate)
   tcflush(gSocket_fd, TCIFLUSH);
   tcsetattr(gSocket_fd, TCSANOW, &newtio);
 
-  */
   return 1;
 
     DXL_HAL_OPEN_ERROR:
@@ -129,9 +105,7 @@ void dxl_hal_close()
 
 int dxl_hal_set_baud( float baudrate )
 {
-  printf("---UNIMPLEMENTED! baudrate: %f\n", baudrate);
-  return 0;
-  /*struct serial_struct serinfo;
+  struct serial_struct serinfo;
 
   if(gSocket_fd == -1)
     return 0;
@@ -154,7 +128,7 @@ int dxl_hal_set_baud( float baudrate )
   //dxl_hal_open(gDeviceName, baudrate);
 
   gfByteTransTime = (float)((1000.0f / baudrate) * 12.0f);
-  return 1;*/
+  return 1;
 }
 
 void dxl_hal_clear(void)
@@ -183,7 +157,7 @@ static inline long myclock()
 void dxl_hal_set_timeout( int NumRcvByte )
 {
   glStartTime = myclock();
-  gfRcvWaitTime = (float)(gfByteTransTime*(float)NumRcvByte + 2 * LATENCY_TIME + 5.0f);
+  gfRcvWaitTime = (float)(gfByteTransTime*(float)NumRcvByte + 2.0 * LATENCY_TIME + 0.0f);
 }
 
 int dxl_hal_timeout(void)

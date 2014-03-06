@@ -1,0 +1,7 @@
+*.swp
+*.swo
+src/*.o
+*.o
+
+example/DataCheck/DataCheck
+example/SyncWrite/SyncWrite

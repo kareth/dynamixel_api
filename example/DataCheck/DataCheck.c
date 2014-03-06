@@ -38,12 +38,12 @@ void SetSpeed(int dynamixel_id, int speed) {
 
 void TestRead(int dynamixel_id) {
   printf("Testing read speed\n");
-  int iterations = 50;
+  int iterations = 2000;
 
-  int words_count = 6;
+  int words_count = 1;
   int words[] = {30, 32, 34, 36, 38, 40};
 
-  int bytes_count = 3;
+  int bytes_count = 0;
   int bytes[] = {42, 43, 46};
 
   for (int i = 0; i < words_count; i++) {
@@ -51,6 +51,10 @@ void TestRead(int dynamixel_id) {
     for (int it = 0; it < iterations; it++) {
       int pos = dxl_read_word(dynamixel_id, words[i]);
       int status = dxl_get_result();
+      if (status != COMM_RXSUCCESS) {
+        PrintCommStatus(status);
+        break;
+      }
     }
     printf("Word %d speed: %lf Hz\n", words[i], double(iterations) / TimeSince(start));
   }
@@ -60,13 +64,17 @@ void TestRead(int dynamixel_id) {
     for (int it = 0; it < iterations; it++) {
       int pos = dxl_read_byte(dynamixel_id, bytes[i]);
       int status = dxl_get_result();
+      if (status != COMM_RXSUCCESS) {
+        PrintCommStatus(status);
+        break;
+      }
     }
     printf("Byte %d speed: %lf Hz\n", bytes[i], double(iterations) / TimeSince(start));
   }
 }
 
 void TestWrite(int dynamixel_id) {
-  int iterations = 100;
+  int iterations = 2000;
 
   auto start = std::chrono::system_clock::now();
   for (int i = 0; i < iterations; i++) {
@@ -82,7 +90,7 @@ void TestMovingSpeed(int dynamixel_id, int speed) {
 
   SetSpeed(dynamixel_id, speed);
 
-  int iterations = 16;
+  int iterations = 2;
   printf("Iterations: %d\n", iterations);
 
   auto start = std::chrono::system_clock::now();
@@ -122,7 +130,7 @@ void FromTo(int dynamixel_id, int from, int to, int speed) {
 
     int pos;
     do {
-      pos = dxl_read_word( DEFAULT_ID, P_PRESENT_POSITION_L );
+      pos = dxl_read_word( dynamixel_id, P_PRESENT_POSITION_L );
       int status = dxl_get_result();
 
       if (status != COMM_RXSUCCESS) {
@@ -143,10 +151,55 @@ void FromTo(int dynamixel_id, int from, int to, int speed) {
   }
 }
 
+void MoveRoboticArm() {
+
+  printf("Do you really want to run leg simulation? enter 123\n");
+  int ans;
+  scanf("%d",&ans);
+  if (ans != 123) return;
+
+  int speed = 100;
+  printf("Speed: \n",1);
+  scanf("%d",&speed);
+
+  SetSpeed(1, speed);
+  SetSpeed(2, speed);
+  SetSpeed(3, speed);
+
+  int p[2][3];
+  p[0][0] = 612;
+  p[0][1] = 232;
+  p[0][2] = 412;
+  p[1][0] = 732;
+  p[1][1] = 162;
+  p[1][2] = 360;
+
+  int i = 0;
+  while(1) {
+    printf("Press enter\n");
+    getchar();
+    i^=1;
+
+    if (p[i][0] < 884 && p[i][0] > 140)
+      dxl_write_word(1, P_GOAL_POSITION_L, p[i][0]);
+    else
+      printf("OOB\n");
+
+    if (p[i][1] < 884 && p[i][1] > 140)
+      dxl_write_word(2, P_GOAL_POSITION_L, p[i][1]);
+    else
+      printf("OOB\n");
+
+    if (p[i][2] < 884 && p[i][2] > 140)
+      dxl_write_word(3, P_GOAL_POSITION_L, p[i][2]);
+    else
+      printf("OOB\n");
+  }
+}
 
 int OpenUsb2Dynamixel() {
   ///////// Open USB2Dynamixel ////////////
-  if(dxl_initialize(0, 34) == 0) {
+  if(dxl_initialize(0, 1) == 0) {
     printf( "Failed to open USB2Dynamixel!\n" );
     return -1;
   }
@@ -156,18 +209,54 @@ int OpenUsb2Dynamixel() {
   }
 }
 
-
 int main() {
   //int GoalPos[2] = {140, 884};
 
   if (OpenUsb2Dynamixel() == -1)
     return 0;
 
-  //TestMovingSpeed(1, 1023);
+  int id = 3;
 
-  //FromTo(1, 140, 884, 0);
-  TestRead(1);
-  TestWrite(1);
+  printf("%d\n", dxl_read_byte(3, 5));
+  dxl_write_byte(3, 5, 1);
+  printf("%d\n", dxl_read_byte(3, 5));
+  printf("%d\n", dxl_read_byte(3, 4));
+  //dxl_write_byte(3, 4, 1);
+  //dxl_write_byte(id, 5, 250);
+  //printf("%d\n", dxl_read_byte(0, 4));
+  //printf("%d\n", dxl_read_byte(1, 4));
+  //printf("%d\n", dxl_read_byte(2, 4));
+  printf("%d\n", dxl_read_byte(3, 4));
+
+  //dxl_write_byte(id, 4, 1);
+  //dxl_write_byte(id, 4, 34);
+  //printf("%d\n", dxl_read_byte(id, 4));
+  //return 0;
+
+  // MoveRoboticArm();
+
+  //ID
+  //dxl_write_byte(id, 3, 2);
+
+  while (1) {
+    printf("1 - Movement\n2 - FromTo\n3 - Read\n4 - Write\n");
+    int n;
+    scanf("%d",&n);
+    if (n == 1)
+      TestMovingSpeed(id, 200);
+    if (n == 2)
+      FromTo(id, 140, 884, 0);
+    if (n == 3)
+      TestRead(id);
+    if (n == 4)
+      TestWrite(id);
+    if (n == 5) {
+
+    }
+    if (n == 6) {
+
+    }
+  }
 
   dxl_terminate();
   return 0;

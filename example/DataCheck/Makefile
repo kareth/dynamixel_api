@@ -3,10 +3,10 @@ OBJS		= DataCheck.o
 SRCS		= $(OBJS:.o=.c)
 INCLUDEDIRS	+= -I../../include
 LIBDIRS		+= -L../../lib
-CFLAGS		= $(INCLUDEDIRS) -W -Wall -O2
+CFLAGS		= $(INCLUDEDIRS) -W -Wall -O2 -std=c++0x
 LDFLAGS		= $(LIBDIRS) -lm -ldxl
 
-CC			= clang++
+CC			= g++
 
 $(TARGET): $(OBJS)
 	$(CC) -o $@ $^ $(LDFLAGS)
