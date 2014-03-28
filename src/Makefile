@@ -1,5 +1,5 @@
 TARGET		= libdxl.a
-OBJS		= serial.o dynamixel.o
+OBJS		= serial.o dynamixel.o instruction_packet.o status_packet.o
 SRCS		= $(OBJS:.o=.cpp)
 INCLUDEDIRS	+= -I../include
 LIBDIRS		+=
