@@ -1,82 +1,120 @@
 #ifndef DYNAMIXEL_DYNAMIXEL_H_
 #define DYNAMIXEL_DYNAMIXEL_H_
 
+#include <string>
+#include <cstdio>
+
+#include "status_packet.h"
+#include "instruction_packet.h"
+#include "serial.h"
+#include "common.h"
+
 namespace dynamixel {
 
+//! Main class to use for communication with dynamixels
+/*! By far it doesnt support SyncWrite.
+ *  All status packet and instruction packet methods has been hidden */
 class Dynamixel {
-
  public:
-   Dynamixel();
+  //! Default constructor
+  Dynamixel();
 
-  ///////////// device control methods ////////////////////////
-  int dxl_initialize(int deviceIndex, int baudnum );
-  void dxl_terminate();
+  //! Closes serial port
+  ~Dynamixel();
 
+  //! Initializes serial port for communication with dynamixels
+  /*! \param device_name serial port path to use
+   *  \param baudrate serial port speed, only standard values are accepted
+   *  \return 0 if succeeded
+   *  \return -1 if opening serial port failed */
+  int Initialize(const std::string& device_name, int baudrate);
 
-  ///////////// set/get packet methods //////////////////////////
-#define MAXNUM_TXPARAM		(150)
-#define MAXNUM_RXPARAM		(60)
-
-  void dxl_set_txpacket_id(int id);
-#define BROADCAST_ID		(254)
-
-  void dxl_set_txpacket_instruction(int instruction);
-#define INST_PING			(1)
-#define INST_READ			(2)
-#define INST_WRITE			(3)
-#define INST_REG_WRITE		(4)
-#define INST_ACTION			(5)
-#define INST_RESET			(6)
-#define INST_SYNC_WRITE		(131)
-
-  void dxl_set_txpacket_parameter(int index, int value);
-  void dxl_set_txpacket_length(int length);
-
-  int dxl_get_rxpacket_error(int errbit);
-#define ERRBIT_VOLTAGE		(1)
-#define ERRBIT_ANGLE		(2)
-#define ERRBIT_OVERHEAT		(4)
-#define ERRBIT_RANGE		(8)
-#define ERRBIT_CHECKSUM		(16)
-#define ERRBIT_OVERLOAD		(32)
-#define ERRBIT_INSTRUCTION	(64)
-
-  int dxl_get_rxpacket_length(void);
-  int dxl_get_rxpacket_parameter(int index);
+  //! Closes serial port
+  /*! After \a Close is called, reading and writing methods should not
+   *  be used until another initialize is called */
+  void Close();
 
 
+  //! Sends ping command to servo
+  /*! \param id id of servo to be pinged (0-254) */
+  void Ping(int id);
 
+  //! Reads one byte from given servo
+  /*! \param id id of servo (0-254)
+   *  \param address address of the servo register
+   *  \return read byte value */
+  int ReadByte(int id, int address);
 
-  ////////// packet communication methods ///////////////////////
-  void dxl_tx_packet(void);
-  void dxl_rx_packet(void);
-  void dxl_txrx_packet(void);
+  //! Writes one byte to given servo
+  /*! \param id id of servo (0-254)
+   *  \param address address of the servo register */
+  void WriteByte(int id, int address, int value);
 
-  int dxl_get_result(void);
-#define	COMM_TXSUCCESS		(0)
-#define COMM_RXSUCCESS		(1)
-#define COMM_TXFAIL		(2)
-#define COMM_RXFAIL		(3)
-#define COMM_TXERROR		(4)
-#define COMM_RXWAITING		(5)
-#define COMM_RXTIMEOUT		(6)
-#define COMM_RXCORRUPT		(7)
+  //! Reads one word (two bytes) from given servo
+  /*! \param id id of servo (0-254)
+   *  \param address address of the first servo register */
+  int ReadWord(int id, int address);
 
+  //! Writes one word (two bytes) to given servo
+  /*! \param id id of servo (0-254)
+   *  \param address address of the first servo register */
+  void WriteWord(int id, int address, int value);
 
-  //////////// high communication methods ///////////////////////
-  void dxl_ping(int id);
-  int dxl_read_byte(int id, int address);
-  void dxl_write_byte(int id, int address, int value);
-  int dxl_read_word(int id, int address);
-  void dxl_write_word(int id, int address, int value);
+  //! Returns status of the previous commands
+  /*! \return 0 if succeeded
+   *  \return negative CommandStatus value if fails*/
+  int status() const { return status_; }
 
  private:
+  //! Writes previously prepared \a instruction_packet_ to serial
+  /*! \return \a 0 if success
+   *  \return negative \a CommandStatus value if fails */
+  int TxPacket();
+
+  //! Reads packet from serial to \a status_packet_
+  /*! \return \a 0 if success
+   *  \return negative \a CommandStatus value if fails */
+  int RxPacket();
+
+  //! Reads additional parameters of packet based on received length
+  /*! \return \a 0 if success
+   *  \return negative \a CommandStatus value if fails */
+  int ReadPacketParams();
+
+  //! Writex packet to serial and reads answer afterwards
+  /*! \return \a 0 if success
+   *  \return negative \a CommandStatus value if fails */
+  int TxRxPacket();
+
+  //! Joins two bytes into 16-bit word
   int MakeWord(int lowbyte, int highbyte);
+
+  //! Returns lower (less important) byte of 16-bit word
   int LowByte(int word);
+
+  //! Returns higher (more important) byte of 16-bit word
   int HighByte(int word);
 
-  void Error(int code);
-  void WaitForBus();
+  //! Saves status to status_ and returns itself
+  //  \param status status that just occured
+  //  \return \a status
+  int Status(int status);
+
+  //! Broadcast ID.
+  /*! Sending command to this ID sends it to all servos,
+   *  and doesn't read any answers afterwards */
+  const static int kBroadcastId = 254;
+
+  //! Serial port used for communication
+  Serial* serial_;
+
+  //! Instruction packet object prepared before each TX
+  InstructionPacket instruction_packet_;
+
+  //! Status packet object filled after each RX
+  StatusPacket status_packet_;
+
+  //! Last command status
   int status_;
 };
 

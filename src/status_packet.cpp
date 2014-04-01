@@ -1,22 +1,29 @@
-#include "status_packet.h"
+#include "../include/status_packet.h"
+#define LENGTH				(3)
+#include <cstdio>
 
 namespace dynamixel {
 
 void StatusPacket::ShiftHeader() {
-  // Find packet header
-  int i, j;
-  for (i = 0; i < (read_length_ - 1); i++) {
-    if (data_[i] == 0xff && data_[i+1] == 0xff) {
+  int pos;
+  for (pos = 0; pos < read_length_ - 1; pos++)
+    if ((data_[pos] == 0xff && data_[pos + 1] == 0xff) ||
+        (pos == read_length_ - 2 && data_[read_length_ - 1] == 0xff))
       break;
-    } else if (i == read_length_-2 && data_[read_length_-1] == 0xff) {
-      break;
-    }
+
+  if (pos > 0) {
+    for (int j = 0; j < read_length_ - pos; j++)
+      data_[j] = data_[j + pos];
+    read_length_ -= pos;
   }
-  if (i > 0) {
-    for (j = 0; j < (read_length_ - i); j++)
-      data_[j] = data_[j + i];
-    read_length_ -= i;
-  }
+}
+
+int StatusPacket::ChecksumValid()  {
+  unsigned char csum = 0;
+  for (int i = 2; i < length() + 3; i++)
+    csum += data_[i];
+  csum = ~csum;
+  return (checksum() == csum);
 }
 
 }  // namespace dynamixel

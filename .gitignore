@@ -3,6 +3,9 @@
 src/*.o
 *.o
 
+doc/html/*
+doc/latex/*
+
 lib/libdxl.a
 src/libdxl.a
 example/DataCheck/DataCheck

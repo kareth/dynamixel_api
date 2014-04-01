@@ -1,4 +1,4 @@
-#include "instruction_packet.h"
+#include "../include/instruction_packet.h"
 
 namespace dynamixel {
 

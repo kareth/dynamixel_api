@@ -8,7 +8,7 @@
 #include <sys/ioctl.h>
 #include <sys/time.h>
 
-#include "serial.h"
+#include "../include/serial.h"
 
 #define LATENCY_TIME        (8)
 
