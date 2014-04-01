@@ -1,6 +1,4 @@
 #include "../include/status_packet.h"
-#define LENGTH				(3)
-#include <cstdio>
 
 namespace dynamixel {
 

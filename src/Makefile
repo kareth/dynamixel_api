@@ -11,14 +11,14 @@ AR			= ar
 $(TARGET): $(OBJS)
 	$(AR) rs $@ $^
 	cp $(TARGET) ../lib
-	
+	rm $(TARGET)
+
 .c.o:
 	$(CXX) -c $< $(CFLAGS)
-	
+
 clean:
 	rm -f $(OBJS) $(TARGET)
 	@echo "file deleted."
 
 dep:
 	gccmakedep $(SRCS)
-

@@ -10,8 +10,6 @@
 
 #include "../include/serial.h"
 
-#define LATENCY_TIME        (8)
-
 namespace dynamixel {
 
 Serial::Serial()
@@ -107,7 +105,7 @@ static inline long myclock() {
 
 void Serial::SetTimeout(int NumRcvByte) {
   glStartTime_ = myclock();
-  gfRcvWaitTime_ = (float)(gfByteTransTime_*(float)NumRcvByte + 2.0 * LATENCY_TIME + 0.0f);
+  gfRcvWaitTime_ = (float)(gfByteTransTime_*(float)NumRcvByte + 2.0 * kLatencyTime + 0.0f);
 }
 
 int Serial::Timeout() {

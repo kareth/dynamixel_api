@@ -24,6 +24,8 @@ class Serial {
 
   int socket_fd_;
 
+  static const int kLatencyTime = 8;
+
   // TODO to remove
   long glStartTime_;
   float	gfRcvWaitTime_;
